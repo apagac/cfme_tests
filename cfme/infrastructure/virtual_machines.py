@@ -393,7 +393,7 @@ class Vm(VM):
             except CandidateNotFound:
                 return False
 
-        def create(self):
+        def create(self, wait_exists=True):
             snapshot_dict = {
                 'description': self.description
             }
@@ -407,8 +407,9 @@ class Vm(VM):
                 snapshot_dict["snapshot_memory"] = self.memory
 
             fill(snapshot_form, snapshot_dict, action=snapshot_form.create_button)
-            wait_for(lambda: self.exists, num_sec=300, delay=20, fail_func=sel.refresh,
-                     handle_exception=True)
+            if wait_exists:
+                wait_for(lambda: self.exists, num_sec=300, delay=20, fail_func=sel.refresh,
+                         handle_exception=True)
 
         def delete(self, cancel=False):
             self._nav_to_snapshot_mgmt()

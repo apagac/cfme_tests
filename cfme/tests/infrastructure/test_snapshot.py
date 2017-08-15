@@ -11,12 +11,14 @@ from cfme.infrastructure.provider import InfraProvider
 from cfme.infrastructure.provider.rhevm import RHEVMProvider
 from cfme.infrastructure.provider.virtualcenter import VMwareProvider
 from cfme.infrastructure.virtual_machines import Vm  # For Vm.Snapshot
+from cfme.web_ui import flash
 from utils import testgen
 from utils.conf import credentials
 from utils.log import logger
 from utils.path import data_path
 from utils.ssh import SSHClient
 from utils.wait import wait_for
+from utils.version import current_version
 
 
 pytestmark = [
@@ -95,6 +97,23 @@ def test_delete_all_snapshots(test_vm, provider):
     snapshot2 = new_snapshot(test_vm)
     snapshot2.create()
     snapshot2.delete_all()
+
+
+#TODO fix uncollectif
+@pytest.mark.uncollectif(lambda provider: current_version() < '5.9'
+                         and not provider.one_of(VMwareProvider))
+def test_create_second_snapshot_suspended_vm(test_vm, provider):
+    test_vm.power_control_from_cfme(option=test_vm.SUSPEND, cancel=False)
+    test_vm.wait_for_vm_state_change(desired_state=test_vm.STATE_SUSPENDED)
+    snapshot1 = new_snapshot(test_vm)
+    snapshot1.create()
+    wait_for(lambda: snapshot1.active, num_sec=300, delay=20, fail_func=sel.refresh)
+    snapshot2 = new_snapshot(test_vm)
+    snapshot2.create(wait_exists=False)
+    #wait for flash message
+    flash.assert_message_match("Snapshot not taken since the state of the virtual machine has not changed since the last snapshot operation.")
+    #check that snapshot2 does not exist
+    assert not snapshot2.exists
 
 
 @pytest.mark.uncollectif(lambda provider:

@@ -155,15 +155,22 @@ def test_group_ownership_on_user_or_group_role(
 
 # @pytest.mark.meta(blockers=[1202947])
 # def test_ownership_transfer(request, user1, user3, setup_infra_provider):
-#    user_ownership_vm = VM.factory('cu-9-5', setup_infra_provider)
-#    user_ownership_vm.set_ownership(user=user1.name)
-#    with user1:
-#        # Checking before and after the ownership transfer
-#        assert user_ownership_vm.exists, "vm not found"
-#        user_ownership_vm.set_ownership(user=user3.name)
-#        assert not user_ownership_vm.exists, "vm exists"
-#    with user3:
-#        assert user_ownership_vm.exists, "vm not found"
-#    user_ownership_vm.unset_ownership()
-#    with user3:
-#        assert set_ownership_to_user.exists, "vm exists"
+def test_ownership_transfer(request, user1, user3, setup_provider, provider):
+    ownership_vm = provider.data['ownership_vm']
+    user_ownership_vm = VM.factory(ownership_vm, provider)
+    user_ownership_vm.set_ownership(user=user1.name, group=group_only_user_owned)
+    #user_ownership_vm.set_ownership(user=user3.name)
+    with user1:
+    #with user3:
+        # Checking before and after the ownership transfer
+        assert user_ownership_vm.exists, "vm not found"
+        user_ownership_vm.set_ownership(user=user3.name)
+        #user_ownership_vm.set_ownership(user=user1.name)
+        assert not user_ownership_vm.exists, "vm exists"
+    with user3:
+    #with user1:
+        assert user_ownership_vm.exists, "vm not found"
+    user_ownership_vm.unset_ownership()
+    with user3:
+    #with user1:
+        assert set_ownership_to_user.exists, "vm exists"

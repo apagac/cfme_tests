@@ -42,7 +42,7 @@ def provision_vm(provider, template):
     vm = VM.factory(vm_name, provider, template_name=template.name)
 
     if not provider.mgmt.does_vm_exist(vm_name):
-        vm.create_on_provider(find_in_cfme=True, allow_skip="default")
+        vm.create_on_provider(find_in_cfme=False, allow_skip="default")
     return vm
 
 
@@ -71,7 +71,8 @@ def full_test_vm(setup_provider_modscope, provider, full_template_modscope, requ
 def new_snapshot(test_vm, has_name=True, memory=False):
     return Vm.Snapshot(
         name="snpshot_{}".format(fauxfactory.gen_alphanumeric(8)) if has_name else None,
-        description="snapshot", memory=memory, parent_vm=test_vm)
+        description="snapshot_{}".format(fauxfactory.gen_alphanumeric(8)),
+        memory=memory, parent_vm=test_vm)
 
 
 @pytest.mark.uncollectif(lambda provider:
@@ -81,7 +82,7 @@ def test_memory_checkbox(small_test_vm, provider, soft_assert):
     # Make sure the VM is powered on
     small_test_vm.power_control_from_cfme(option=small_test_vm.POWER_ON, cancel=False)
     # Try to create snapshot with memory on powered on VM
-    has_name = provider.one_of(RHEVMProvider)
+    has_name = not provider.one_of(RHEVMProvider)
     snapshot1 = new_snapshot(small_test_vm, has_name=has_name, memory=True)
     snapshot1.create()
     assert snapshot1.exists

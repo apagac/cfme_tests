@@ -89,3 +89,34 @@ def test_update_password(context, request, appliance):
         appliance.server.login(user)
 
     user.delete()
+
+
+@pytest.mark.parametrize('context', [ViaUI])
+# TODO check if this is reproducible on 5.10
+@pytest.mark.meta(blockers=[BZ(1558109, forced_streams=['5.9'])])
+def test_all_pace_password(context, request, appliance):
+
+    # Create user with all-space password
+    username = 'user_{}'.format(fauxfactory.gen_alphanumeric(4).lower())
+    password = "     "
+    user_group = appliance.collections.groups.instantiate(description="EvmGroup-vm_user")
+    creds = Credential(principal=username, secret='redhat')
+
+    # It should not be possible to create a user with all-space password
+    # TODO: find out error message to check
+    with pytest.raises(Exception):
+        user = appliance.collections.users.create(
+            name=username,
+            credential=creds
+            groups=user_group
+        )
+
+    # Now try to change password of a user to whitespace characters
+    # Using default admin user
+    username = conf.credentials['default']['username']
+    password = conf.credentials['default']['password']
+    cred = Credential(principal=username, secret=password)
+    user = appliance.collections.users.instantiate(credential=cred, name='Administrator')
+    error_message = "Error: New password can not be blank"
+    with pytest.raises(Exception, match=error_message):
+        changed_pass_page = appliance.server.update_password(new_password='     ', user=user)

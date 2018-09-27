@@ -58,6 +58,14 @@ def test_bad_password(context, request, appliance):
             view = appliance.browser.create_view(LoginPage)
             assert view.password.read() == '' and view.username.read() == ''
 
+    # Test blank password
+    password = ""
+    cred = Credential(principal=username, secret=password)
+    user = appliance.collections.users.instantiate(credential=cred, name='Administrator')
+    with appliance.context.use(context):
+        with pytest.raises(Exception, match=error_message):
+            appliance.server.login(user)
+
 
 @pytest.mark.parametrize('context', [ViaUI])
 def test_update_password(context, request, appliance):

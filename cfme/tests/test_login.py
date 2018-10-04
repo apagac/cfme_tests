@@ -11,11 +11,16 @@ from cfme.utils.version import LOWEST, UPSTREAM, VersionPicker
 
 pytestmark = pytest.mark.usefixtures('browser')
 
+# TODO add blockers for 5.10 for chrome
 
 def new_cred(username, password):
     username = username or conf.credentials['default']['username']
     password = password or conf.credentials['default']['password']
-    cred = Credential(principal=username, secret=password)
+    if password == "":
+        pass
+    else:
+        password = password or conf.credentials['default']['password']
+    cred = Credential(principal=username, secret="")
     return cred
 
 
@@ -70,14 +75,15 @@ def test_login(context, method, appliance):
 @pytest.mark.tier(2)
 @pytest.mark.sauce
 @pytest.mark.parametrize('context', [ViaUI])
+@pytest.mark.parametrize('password', ["badpassword@#$", ""])
 # BZ 1632718 is only relevant for Chrome browser
 @pytest.mark.meta(blockers=[BZ(1632718, forced_streams=['5.10'])])
-def test_bad_password(context, request, appliance):
+def test_bad_password(context, password, request, appliance):
     """ Tests logging in with a bad password. """
 
     user = new_user_instantiate(
         appliance,
-        password="badpassword@#$",
+        password=password,
     )
 
     error_message = VersionPicker({
@@ -91,6 +97,71 @@ def test_bad_password(context, request, appliance):
         if appliance.version >= '5.9':
             view = appliance.browser.create_view(LoginPage)
             assert view.password.read() == '' and view.username.read() == ''
+
+
+@pytest.mark.parametrize('context', [ViaUI])
+@pytest.mark.parametrize(
+    'password', [
+        '{}'.format(fauxfactory.gen_alphanumeric(8).lower()),
+        '{}'.format(fauxfactory.gen_alphanumeric(8)),
+        ' leading_whitespace',
+        '{}'.format(fauxfactory.gen_special(8)),
+        ],
+    ids=[
+        'alphanumeric_lower',
+        'alphanumeric',
+        'leading_whitespace',
+        'special_chars',
+    ])
+def test_good_password(appliance, context, password, request):
+    """ Test logging in with a good password """
+
+    user = new_user_create(
+        appliance,
+        request,
+        username='user_temp_{}'.format(fauxfactory.gen_alphanumeric(4).lower()),
+        password=password
+        group="EvmGroup-vm_user"
+    )
+
+    with appliance.context.use(context):
+        logged_in_page = appliance.server.login(user)
+        assert logged_in_page.is_displayed
+        logged_in_page.logout()
+
+
+@pytest.mark.parametrize(
+    'password', [
+        '{}'.format(fauxfactory.gen_special(8)),
+        ' lead_spc',
+        '{}'.format(fauxfactory.gen_alphanumeric(17)),
+        'trail_spc ',
+    ],
+    ids=[
+        'special_characters',
+        'leading_space',
+        'longer_than_16',
+        'trailing_space',
+    ])
+@pytest.mark.parametrize('context', [ViaUI])
+def test_update_good_password(context, request, appliance, password)
+    username='user_temp_{}'.format(fauxfactory.gen_alphanumeric(4).lower())
+    user = new_user_create(
+        appliance,
+        request,
+        username=username
+        password='changeme'
+        groupt='EvmGroup-vm_user'
+    )
+
+    changed_pass_page = appliance.server.update_password(new_password=password, user=user)
+    assert changed_pass_page.is_displayed
+    changed_pass_page.logout()
+
+    # TODO find out if this is needed
+    # it would be if we are using the same VM for every parameter
+    cred = new_cred(username=username, password=password)
+    user.credential = cred
 
 
 @pytest.mark.parametrize('context', [ViaUI])
@@ -141,3 +212,4 @@ def test_update_password(context, request, appliance):
     appliance.server.browser.refresh()
 
     # The user we created will be deleted via finalizer
+

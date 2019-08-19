@@ -339,11 +339,14 @@ def test_user_group_switching(appliance, auth_user, auth_mode, auth_provider, so
             soft_assert(other_group in auth_user.groups, u'Group {} in UI not expected for user {}'
                                                          .format(other_group, auth_user))
             view.change_group(other_group)
+            # In 5.11 the user is logged out when switching groups, we need to log in again
+            if appliance.version >= 5.11:
+                view = navigate_to(appliance.server, 'LoggedIn')
             assert view.is_displayed, (u'Not logged in after switching to group {} for {}'
                                        .format(other_group, auth_user))
             # assert selected group has changed
-            soft_assert(other_group == view.current_groupname,
-                        u'After switching to group {}, its not displayed as active'
+            assert other_group == view.current_groupname, \
+                        (u'After switching to group {}, its not displayed as active'
                         .format(other_group))
 
     appliance.server.login_admin()

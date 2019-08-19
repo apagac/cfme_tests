@@ -30,6 +30,12 @@ pytestmark = [
 ]
 
 
+# Please note that in 5.11 we lost the ability to force select VNC console for a VM.
+# Tests listed in this module are still relevant for 5.10.
+# There might be possibility to force the VNC console via VSphere UI.
+# Bugzilla: 1732739, 1532720
+
+
 @pytest.fixture(scope="function")
 def vm_obj(request, provider, setup_provider, console_template):
     """
